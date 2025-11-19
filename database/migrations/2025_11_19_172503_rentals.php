@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-          Schema::create('rentals', function (Blueprint $table) {
+        Schema::create('rentals', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->date('start_date');
             $table->date('due_date');
             $table->timestamp('returned_at')->nullable();
-            $table->enum('status', ['pending','active','returned','cancelled'])->default('pending');
+            $table->enum('status', ['pending', 'active', 'returned', 'cancelled'])->default('pending');
             $table->integer('total_price')->default(0);
-            $table->integer('fine_')->default(0);
+            $table->integer('fine_amount')->default(0);
             $table->timestamps();
         });
     }
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('rentals');
     }
 };

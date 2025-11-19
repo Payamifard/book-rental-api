@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->string('author')->nullable();
-            $table->string('isbn')->nullable();
             $table->integer('price_per_day')->default(0);
             $table->unsignedBigInteger('stock')->default(0);
             $table->timestamps();
