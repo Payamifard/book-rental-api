@@ -29,14 +29,18 @@ class RentalSeeder extends Seeder
             'rental_id' => $rental->id,
             'book_id' => $book1->id,
             'quantity' => 1,
-            'price' => $book1->price,
+            'price_per_day' => $book1->price_per_day,
+            'subtotal' => 1 * $book1->price_per_day,
+
         ]);
 
         RentalItem::create([
             'rental_id' => $rental->id,
             'book_id' => $book2->id,
             'quantity' => 1,
-            'price' => $book2->price,
+            'price_per_day' => $book2->price_per_day,
+            'subtotal' => 1 * $book2->price_per_day,
+
         ]);
     }
 }
