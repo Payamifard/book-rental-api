@@ -18,11 +18,13 @@ class UserSeeder extends Seeder
                 'name' => 'Test User',
                 'email' => 'test@example.com',
                 'password' => '12345678',
+                'is_admin' => false,
             ],
             [
                 'name' => 'Admin User',
                 'email' => 'admin@example.com',
                 'password' => '12345678',
+                'is_admin' => true,
             ],
         ];
 

@@ -10,11 +10,11 @@ class RentalPolicy
 {
     public function view(User $user, Rental $rental)
     {
-        return $rental->user_id === $user->id;
+        return $user->is_admin || $rental->user_id === $user->id;
     }
 
     public function update(User $user, Rental $rental)
     {
-        return $rental->user_id === $user->id;
+        return $user->is_admin || $rental->user_id === $user->id;
     }
 }
