@@ -10,13 +10,6 @@ use InvalidArgumentException;
 USE App\Models\RentRule ;
 class RentalService
 {
-    protected float $fineRate; // fine rate is percent of price_per_day per late day
-
-    public function __construct()
-    {
-        $this->fineRate = config('rentals.fine_rate', 0.1);
-    }
-
     public function createRental(array $payload): Rental
     {
         return DB::transaction(function () use ($payload) {

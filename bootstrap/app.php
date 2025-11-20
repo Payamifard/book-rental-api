@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Throwable;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,5 +18,37 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+
+        // گزارش لاگ خطاها
+        $exceptions->report(function (Throwable $e) {
+            logger()->error($e);
+        });
+
+        // تبدیل exception ها به response مناسب API
+        $exceptions->render(function (Throwable $e, $request) {
+
+            // Authentication خطا → 401 JSON
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+
+            // Validation خطا → 422 JSON
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            // InvalidArgumentException → 400 JSON
+            if ($e instanceof \InvalidArgumentException) {
+                return response()->json([
+                    'message' => $e->getMessage()
+                ], 400);
+            }
+
+            return null;
+        });
     })->create();

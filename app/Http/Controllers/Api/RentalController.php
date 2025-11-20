@@ -7,6 +7,8 @@ use App\Services\RentalService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class RentalController extends Controller
 {
@@ -32,19 +34,35 @@ class RentalController extends Controller
 
     public function store(Request $request)
     {
-        $payload = $request->validate([
-            'start_date' => 'required|date',
-            'due_date' => 'required|date|after_or_equal:start_date',
-            'items' => 'required|array|min:1',
-            'items.*.book_id' => 'required|integer|exists:books,id',
-            'items.*.quantity' => 'required|integer|min:1',
-        ]);
+        try {
+            $payload = $request->validate([
+                'start_date' => 'required|date',
+                'due_date' => 'required|date|after_or_equal:start_date',
+                'items' => 'required|array|min:1',
+                'items.*.book_id' => 'required|integer|exists:books,id',
+                'items.*.quantity' => 'required|integer|min:1',
+            ]);
+            $payload['user_id'] = $request->user()->id;
 
-        $payload['user_id'] = $request->user()->id;
-
-        $rental = $this->service->createRental($payload);
-
-        return response()->json($rental, 201);
+            $rental = $this->service->createRental($payload);
+            return response()->json(['success' => true, 'data' => $rental], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal server error'
+            ], 500);
+        }
     }
 
     public function show(Rental $rental)
@@ -55,10 +73,14 @@ class RentalController extends Controller
 
     public function return(Request $request, Rental $rental)
     {
-        $this->authorize('update', $rental);
-
-        $returned = $this->service->returnRental($rental, $request->input('returned_at'));
-
-        return response()->json($returned);
+        try {
+            $this->authorize('update', $rental);
+            $returned = $this->service->returnRental($rental, $request->input('returned_at'));
+            return response()->json(['success' => true, 'data' => $returned]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Internal server error'], 500);
+        }
     }
 }
