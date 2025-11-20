@@ -7,7 +7,7 @@ use App\Models\RentalItem;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-
+USE App\Models\RentRule ;
 class RentalService
 {
     protected float $fineRate; // fine rate is percent of price_per_day per late day
@@ -26,7 +26,7 @@ class RentalService
                 throw new InvalidArgumentException('due_date must be >= start_date');
             }
 
-            $days = $due->diffInDays($start) ?: 1; // if same day => 1 day
+            $days = $start->diffInDays($due) + 1;
 
             $rental = Rental::create([
                 'user_id' => $payload['user_id'],
@@ -67,27 +67,53 @@ class RentalService
     }
 
     /**
-     * Return rental: calculate fine and restock.
+     * Return rental: calculate fine based on rules and restock.
      */
-    public function returnRental(Rental $rental, ?\DateTimeInterface $returnedAt = null): Rental
+    public function returnRental(Rental $rental, $returnedAt = null): Rental
     {
         return DB::transaction(function () use ($rental, $returnedAt) {
+
             if ($rental->status === 'returned') {
                 throw new InvalidArgumentException('rental already returned');
             }
+
             $returned = $returnedAt ? Carbon::parse($returnedAt) : Carbon::now();
             $due = Carbon::parse($rental->due_date)->startOfDay();
-            $lateDays = max(0, $returned->startOfDay()->diffInDays($due, false));
+
+            // اگر زودتر برگرداند → هیچ دیرکردی وجود ندارد
+            if ($returned->lt($due)) {
+                $lateDays = 0;
+            } else {
+                $lateDays = $due->diffInDays($returned->startOfDay());
+            }
+
+
+            // بارگذاری قانون جریمه دیرکرد فعال
+            $lateFeeRule = RentRule::where('name', 'late_fee')->where('active', true)->first();
 
             $fine = 0;
-            if ($lateDays > 0) {
+            if ($lateDays > 0 && $lateFeeRule) {
                 foreach ($rental->items as $item) {
-                    // fine per item = price_per_day * quantity * lateDays * fineRate
-                    $fine += $item->price_per_day * $item->quantity * $lateDays * $this->fineRate;
+                    switch ($lateFeeRule->value_type) {
+                        case 'fixed':
+                            // جریمه ثابت به ازای هر کتاب
+                            $fine += $lateFeeRule->value * $item->quantity;
+                            break;
+
+                        case 'percent':
+                            // درصدی از قیمت روزانه × تعداد روز × تعداد کتاب‌ها
+                            $fine += $item->price_per_day * $item->quantity * $lateDays * ($lateFeeRule->value / 100);
+                            break;
+
+                        case 'day_rate':
+                            // مبلغ ثابت روزانه × تعداد روز × تعداد کتاب‌ها
+                            $fine += $lateFeeRule->value * $item->quantity * $lateDays;
+                            break;
+                    }
                 }
             }
 
-            // restock
+            // بازگرداندن موجودی کتاب‌ها
             foreach ($rental->items as $item) {
                 $book = Book::lockForUpdate()->find($item->book_id);
                 $book->stock += $item->quantity;

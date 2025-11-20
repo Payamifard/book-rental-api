@@ -15,8 +15,15 @@ class UserSeeder extends Seeder
     {
         $usersData = [
             [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
+                'name' => 'Test User1',
+                'email' => 'test1@example.com',
+                'password' => '12345678',
+                'is_admin' => false,
+            ],
+
+            [
+                'name' => 'Test User2',
+                'email' => 'test2@example.com',
                 'password' => '12345678',
                 'is_admin' => false,
             ],
@@ -30,10 +37,11 @@ class UserSeeder extends Seeder
 
         foreach ($usersData as $data) {
             $user = User::updateOrCreate(
-                ['email' => $data['email']],
                 [
+                    'email' => $data['email'] ,
                     'name' => $data['name'],
                     'password' => Hash::make($data['password']),
+                    'is_admin' => $data['is_admin'] ,
                 ]
             );
 

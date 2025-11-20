@@ -20,6 +20,12 @@ class RentalController extends Controller
 
     public function index(Request $request)
     {
+        if ($request->user()->is_admin) {
+            // همه سفارش‌ها
+            $rentals = Rental::with(['user', 'items.book'])->latest()->get();
+            return response()->json($rentals);
+        }
+        // فقط سفارش‌های خود کاربر
         $rentals = $request->user()->rentals()->with('items.book')->paginate(10);
         return response()->json($rentals);
     }
