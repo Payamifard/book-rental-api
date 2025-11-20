@@ -2,31 +2,44 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
-
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-         {
-        User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('12345678'),
-        ]);
+        $usersData = [
+            [
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => '12345678',
+            ],
+            [
+                'name' => 'Admin User',
+                'email' => 'admin@example.com',
+                'password' => '12345678',
+            ],
+        ];
 
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('12345678'),
-        ]);
-    }
+        foreach ($usersData as $data) {
+            $user = User::updateOrCreate(
+                ['email' => $data['email']],
+                [
+                    'name' => $data['name'],
+                    'password' => Hash::make($data['password']),
+                ]
+            );
+
+            // ایجاد توکن
+            $token = $user->createToken('api-token')->plainTextToken;
+
+            // چاپ توکن در ترمینال
+            echo "User: {$user->email} | Token: {$token}\n";
+        }
     }
 }
