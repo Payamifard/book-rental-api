@@ -6,12 +6,13 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Throwable;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        api: __DIR__ . '/../routes/api.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -27,28 +28,40 @@ return Application::configure(basePath: dirname(__DIR__))
         // تبدیل exception ها به response مناسب API
         $exceptions->render(function (Throwable $e, $request) {
 
-            // Authentication خطا → 401 JSON
-            if ($e instanceof AuthenticationException) {
-                return response()->json([
-                    'message' => 'Unauthenticated.'
-                ], 401);
-            }
+            // فقط برای API
+            if ($request->is('api/*')) {
 
-            // Validation خطا → 422 JSON
-            if ($e instanceof ValidationException) {
-                return response()->json([
-                    'message' => 'Validation failed.',
-                    'errors' => $e->errors()
-                ], 422);
-            }
+                if ($e instanceof AuthenticationException) {
+                    return response()->json([
+                        'message' => 'Unauthenticated.'
+                    ], 401);
+                }
 
-            // InvalidArgumentException → 400 JSON
-            if ($e instanceof \InvalidArgumentException) {
-                return response()->json([
+                if ($e instanceof ValidationException) {
+                    return response()->json([
+                        'message' => 'Validation failed.',
+                        'errors' => $e->errors()
+                    ], 422);
+                }
+
+                if ($e instanceof \InvalidArgumentException) {
+                    return response()->json([
+                        'message' => $e->getMessage()
+                    ], 400);
+                }
+
+                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                    return response()->json([
+                        'message' => 'Resource not found.'
+                    ], 404);
+                }
+
+                // بقیه خطاها → 500
+                   return response()->json([
                     'message' => $e->getMessage()
-                ], 400);
+                ], $e instanceof HttpException ? $e->getStatusCode() : 500);
             }
 
-            return null;
+            return null; 
         });
     })->create();
